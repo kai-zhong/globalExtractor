@@ -18,21 +18,21 @@ int main(int argc, char* argv[])
     std::cout << "max capacity: " << options.maxcapacity << std::endl;
     std::cout << PRINT_SEPARATOR << std::endl;
 
+
     VertexID minDegreeV;
     uint deg;
 
     Graph graph;
     graph.loadGraphfromFile(options.filename);
     std::cout << "Graph has loaded" << std::endl;
-
+    // graph.printGraphInfoSimple();
 
     auto start = std::chrono::high_resolution_clock::now();
     globalExtractor extractor;
     Graph subgraph = extractor.subgraphExtract(graph, options.khop, options.query);
     std::cout << "Subgraph has extracted" << std::endl;
-    // subgraph.printGraphInfo();
+
     Graph kcoreGraph = extractor.kcoreExtract(subgraph, options.k, options.query);
-    // kcoreGraph.printGraphInfo();
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "Computation Time taken: " << duration.count() << " ms" << std::endl;

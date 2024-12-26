@@ -36,19 +36,11 @@ Graph globalExtractor::subgraphExtract(const Graph& G, uint khop, VertexID vid)
         Vertex currentVertex = G.getVertex(currentVid);
         const std::vector<VertexID>& currentVNeighbors = currentVertex.getNeighbors();
 
-        subgraph.addVertex(currentVid, false);
+        subgraph.addVertex(currentVid, false, false);
 
         // 遍历当前节点的邻居
         if(G.getVertexDegree(currentVid) > 0)
         {
-            // const std::vector<VertexID>& neighbors = G.getVertex(currentVid).getNeighbors();
-            
-            // std::cout << "Current vertex neighbors: " << std::endl;
-            // for(int i = 0; i < currentVNeighbors.size(); i++)
-            // {
-            //     std::cout << currentVNeighbors[i] << " ";
-            // }
-            // std::cout << std::endl;
             
             for (std::vector<VertexID>::const_iterator it = currentVNeighbors.begin(); it != currentVNeighbors.end(); ++it)
             {
@@ -56,7 +48,7 @@ Graph globalExtractor::subgraphExtract(const Graph& G, uint khop, VertexID vid)
 
                 if(subgraph.hasVertex(neighborVid))
                 {
-                    subgraph.addEdge(currentVid, neighborVid, false);
+                    subgraph.addEdge(currentVid, neighborVid, false, false);
                 }
 
                 if(currentHop < khop && !visited[neighborVid])
@@ -76,33 +68,30 @@ Graph globalExtractor::kcoreExtract(Graph G, uint k, VertexID queryVid)
     VertexID minDegreeV;
     uint deg;
     bool satisfyKcore = false;
+    Graph kcoreG;
     while(true)
     {
         minDegreeV = G.getMinDegreeVertexID();
         deg = G.getVertexDegree(minDegreeV);
-        // std::cout << "Min degree vertex: " << minDegreeV << std::endl;
-        // std::cout << minDegreeV << " degree: " << deg << std::endl;
-        if(minDegreeV == queryVid)
-        {
-            break;
-        }
         if(deg < k)
         {
-            G.removeVertex(minDegreeV, true);
-            // std::cout << "Vertex " << minDegreeV << " has been removed" << std::endl;
+            if(minDegreeV == queryVid)
+            {
+                break;
+            }
+            G.removeVertex(minDegreeV, true, false);
         }
         else
         {
-            // std::cout << "Over" << std::endl;
             satisfyKcore = true;
             break;
         }
-        // std::cout << std::endl;
     }
     if(!satisfyKcore)
     {
         std::cout << "The graph does not satisfy k-core property." << std::endl;
+        return G;
     }
-    return G;
+    // 将所有不连通节点删除
+    return subgraphExtract(G, 1000, queryVid);
 }
-

@@ -118,11 +118,12 @@ void Graph::loadGraphfromFile(const std::string& filename)
             throw std::runtime_error("Invalid input format in file " + filename);
         }
 
-        addEdge(src, dst, false);
+        addEdge(src, dst, false, false);
     }
     file.close();
 
     buildInvertedIndex();
+    computeVertexDigest();
 }
 
 void Graph::writeGraphtoFile(const std::string& filename)
@@ -130,11 +131,15 @@ void Graph::writeGraphtoFile(const std::string& filename)
 
 }
 
-void Graph::addVertex(const VertexID& vid, bool updateIndex)
+void Graph::addVertex(const VertexID& vid, bool updateIndex, bool computeVDigest)
 {
     if(!hasVertex(vid))
     {
         nodes[vid] = Vertex(vid);
+        if(computeVDigest == true)
+        {
+            nodes[vid].digestCompute();
+        }
         ++vertex_num;
 
         if(updateIndex)
@@ -144,7 +149,7 @@ void Graph::addVertex(const VertexID& vid, bool updateIndex)
     }
 }
 
-void Graph::removeVertex(const VertexID& vid, bool updateIndex)
+void Graph::removeVertex(const VertexID& vid, bool updateIndex, bool computeVDigest)
 {
     if(hasVertex(vid))
     {
@@ -157,6 +162,10 @@ void Graph::removeVertex(const VertexID& vid, bool updateIndex)
         for(const VertexID& neighbor : neighbors)
         {
             nodes.at(neighbor).removeNeighbor(vid);
+            if(computeVDigest == true)
+            {
+                nodes.at(neighbor).digestCompute();
+            }
             --edge_num;
         }
 
@@ -165,16 +174,21 @@ void Graph::removeVertex(const VertexID& vid, bool updateIndex)
     }
 }
 
-void Graph::addEdge(const VertexID& src, const VertexID& dst, bool updateIndex)
+void Graph::addEdge(const VertexID& src, const VertexID& dst, bool updateIndex, bool computeVDigest)
 {
     // 会检查src和dst是否存在，不存在则会自动添加
-    addVertex(src, false);
-    addVertex(dst, false);
+    addVertex(src, false, computeVDigest);
+    addVertex(dst, false, computeVDigest);
     
     if(!nodes.at(src).hasNeighbor(dst))
     {
         nodes.at(src).addNeighbor(dst);
         nodes.at(dst).addNeighbor(src);
+        if(computeVDigest == true)
+        {
+            nodes.at(src).digestCompute();
+            nodes.at(dst).digestCompute();
+        }
         ++edge_num;
 
         if(updateIndex)
@@ -184,7 +198,7 @@ void Graph::addEdge(const VertexID& src, const VertexID& dst, bool updateIndex)
     }
 }
 
-void Graph::removeEdge(const VertexID& src, const VertexID& dst, bool updateIndex)
+void Graph::removeEdge(const VertexID& src, const VertexID& dst, bool updateIndex, bool computeVDigest)
 {
     if(hasVertex(src) && hasVertex(dst))
     {
@@ -192,6 +206,11 @@ void Graph::removeEdge(const VertexID& src, const VertexID& dst, bool updateInde
         {
             nodes.at(src).removeNeighbor(dst);
             nodes.at(dst).removeNeighbor(src);
+            if(computeVDigest == true)
+            {
+                nodes.at(src).digestCompute();
+                nodes.at(dst).digestCompute();
+            }
             --edge_num;
         }
 
@@ -207,9 +226,8 @@ void Graph::buildInvertedIndex()
     invertedIndex.clear();
     for(const std::pair<uint, Vertex>& nodepair : nodes)
     {
-        Vertex node = nodepair.second;
-        uint degree = node.getDegree();
-        invertedIndex[degree].push_back(node.getVid());
+        uint degree = nodepair.second.getDegree();
+        invertedIndex[degree].push_back(nodepair.second.getVid());
     }
 }
 
@@ -242,7 +260,15 @@ void Graph::updateInvertedIndexAUE(const VertexID& src, const VertexID& dst)
     invertedIndex[dstDegree].push_back(dst);
 }
 
-void Graph::printGraphInfo() const
+void Graph::computeVertexDigest()
+{
+    for(auto& node : nodes)
+    {
+        node.second.digestCompute();
+    }
+}
+
+void Graph::printGraphInfo(int verboseNodeNum) const
 {
     std::cout << "Graph Information:" << std::endl;
     std::cout << PRINT_SEPARATOR << std::endl;
@@ -251,9 +277,17 @@ void Graph::printGraphInfo() const
 
     std::cout << "Nodes Information:" << std::endl;
     int count = 0; // 计数器
+    int verboseNum = verboseNodeNum;
+    if(verboseNodeNum == -1)
+    {
+        verboseNum = vertex_num;
+    }
     for (const std::pair<VertexID, Vertex>& node : nodes) 
     {
-        if (count >= 10) break; // 打印 10 个后停止
+        if (count >= verboseNum)
+        { 
+            break;
+        }
         node.second.printInfo(); // 调用 Vertex 类的 printInfo() 打印节点信息
         count++;
     }
@@ -268,5 +302,31 @@ void Graph::printGraphInfo() const
             std::cout << vertex << " ";
         }
         std::cout << std::endl;
+    }
+}
+
+void Graph::printGraphInfoSimple(int verboseNodeNum) const
+{
+    int count = 0; // 计数器
+    int verboseNum = verboseNodeNum;
+    if(verboseNodeNum == -1)
+    {
+        verboseNum = vertex_num;
+    }
+
+    std::cout << "Graph Information:" << std::endl;
+    std::cout << "Number of vertices: " << vertex_num << std::endl;
+    std::cout << "Number of edges: " << edge_num << std::endl;
+    std::cout << "Nodes Information:" << std::endl;
+    for (const std::pair<VertexID, Vertex>& node : nodes) 
+    {
+        if (count >= verboseNum) 
+        {
+            break;
+        }
+        std::cout << node.second.getVid() << ": ";
+        node.second.printNeighbors();
+        node.second.printDigest();
+        count++;
     }
 }

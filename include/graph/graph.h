@@ -46,15 +46,18 @@ class Graph
         void loadGraphfromFile(const std::string& filename);
         void writeGraphtoFile(const std::string& filename);
 
-        void addVertex(const VertexID& vid, bool updateIndex);
-        void removeVertex(const VertexID& vid, bool updateIndex);
-        void addEdge(const VertexID& src, const VertexID& dst, bool updateIndex);
-        void removeEdge(const VertexID& src, const VertexID& dst, bool updateIndex);
+        void addVertex(const VertexID& vid, bool updateIndex, bool computeVDigest);
+        void removeVertex(const VertexID& vid, bool updateIndex, bool computeVDigest);
+        void addEdge(const VertexID& src, const VertexID& dst, bool updateIndex, bool computeVDigest);
+        void removeEdge(const VertexID& src, const VertexID& dst, bool updateIndex, bool computeVDigest);
 
         void buildInvertedIndex();
         void updateInvertedIndexADV(const VertexID& vid); // 删除节点后更新倒排索引
         void updateInvertedIndexAAV(const VertexID& vid); // 增加节点后更新倒排索引
         void updateInvertedIndexAUE(const VertexID& src, const VertexID& dst); // 更新边（包括删除和增加）后更新倒排索引
 
-        void printGraphInfo() const;
+        void computeVertexDigest();
+
+        void printGraphInfo(int verboseNodeNum = -1) const;
+        void printGraphInfoSimple(int verboseNodeNum = -1) const;
 };
