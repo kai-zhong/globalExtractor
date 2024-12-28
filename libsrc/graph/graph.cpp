@@ -87,6 +87,16 @@ Vertex Graph::getVertex(const VertexID& vid) const
     return nodes.at(vid);
 }
 
+std::array<unsigned char, SHA256_DIGEST_LENGTH> Graph::getVertexDigest(const VertexID& vid) const
+{
+    if(!hasVertex(vid))
+    {
+        std::cerr << "Error: Vertex " << vid << " does not exist!" << std::endl;
+        throw std::runtime_error("Vertex " + std::to_string(vid) + " does not exist!");
+    }
+    return nodes.at(vid).getDigest();
+}
+
 const std::map<uint, Vertex>& Graph::getNodes() const
 {
     return nodes;
@@ -122,8 +132,16 @@ void Graph::loadGraphfromFile(const std::string& filename)
     }
     file.close();
 
+    std::cout << "Graph : Graph has been loaded from file " << filename << std::endl;
+
     buildInvertedIndex();
+    std::cout << "Graph : Inverted Index built." << std::endl;
+    
     computeVertexDigest();
+    std::cout << "Graph : Vertexs Digest has been Computed." << std::endl;
+
+    std::cout << "Graph : Graph build complete."<< std::endl;
+    std::cout << std::endl;
 }
 
 void Graph::writeGraphtoFile(const std::string& filename)

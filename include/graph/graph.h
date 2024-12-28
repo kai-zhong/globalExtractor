@@ -13,6 +13,7 @@
 #include <utility>
 #include <algorithm>
 #include <map>
+#include <array>
 #include "../configuration/types.h"
 #include "../configuration/config.h"
 #include "vertex.h"
@@ -38,6 +39,8 @@ class Graph
         uint getVertexDegree(const VertexID& vid) const;
 
         Vertex getVertex(const VertexID& vid) const;
+
+        std::array<unsigned char, SHA256_DIGEST_LENGTH> getVertexDigest(const VertexID& vid) const;
 
         const std::map<uint, Vertex>& getNodes() const;
 

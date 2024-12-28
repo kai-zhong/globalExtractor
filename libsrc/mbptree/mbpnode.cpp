@@ -7,6 +7,9 @@ MbpNode::MbpNode(MbpNode* _parent, MbpNode* _prev, MbpNode* _next, bool _isLeaf)
     next = _next;
     isLeaf = _isLeaf;
 
+    isDigestComputed = false;
+    memset(digest, 0, SHA256_DIGEST_LENGTH);
+
     if(next != nullptr)
     {
         next->prev = this;
@@ -19,46 +22,47 @@ MbpNode::MbpNode(MbpNode* _parent, MbpNode* _prev, MbpNode* _next, bool _isLeaf)
 
 MbpNode::~MbpNode(){}
 
-uint MbpNode::indexofChild(uint key)
+uint MbpNode::indexofChild(const uint& key) const
 {
-    for(int i = 0; i < keys.size(); i++)
+    auto it = std::lower_bound(keys.begin(), keys.end(), key); // 返回指向第一个大于等于 key 的迭代器
+    if (it != keys.end() && *it == key) // 等于 key 的情况的child index再加1
     {
-        if(key < keys[i])
-        {
-            return i;
-        }
+        ++it;
+    }
+    return std::distance(keys.begin(), it);
+}
+
+uint MbpNode::indexofKey(const uint& key) const
+{
+    auto it = std::lower_bound(keys.begin(), keys.end(), key); // 返回指向第一个大于等于 key 的迭代器
+    if(it != keys.end() && *it == key)
+    {
+        return std::distance(keys.begin(), it);
     }
     return keys.size();
 }
 
-uint MbpNode::indexofKey(uint key)
+bool MbpNode::hasKey(const uint& key) const
 {
-    for(int i = 0; i < keys.size(); i++)
-    {
-        if(keys[i] == key)
-        {
-            return i;
-        }
-    }
-    return -1;
+    return std::binary_search(keys.begin(), keys.end(), key);
 }
 
-MbpNode* MbpNode::getParent()
+MbpNode* MbpNode::getParent() const
 {
     return parent;
 }
 
-MbpNode* MbpNode::getPrev()
+MbpNode* MbpNode::getPrev() const
 {
     return prev;
 }
 
-MbpNode* MbpNode::getNext()
+MbpNode* MbpNode::getNext() const
 {
     return next;
 }
 
-MbpNode* MbpNode::getChild(uint key)
+MbpNode* MbpNode::getChild(const uint& key) const
 {
     return children[indexofChild(key)];
 }
@@ -78,12 +82,12 @@ void MbpNode::setNext(MbpNode* _next)
     next = _next;
 }
 
-bool MbpNode::isLeafNode()
+bool MbpNode::isLeafNode() const
 {
     return isLeaf;
 }
 
-void MbpNode::setChild(uint key, std::vector<MbpNode*> value)
+void MbpNode::setChild(const uint& key, const std::vector<MbpNode*>& value)
 {
     uint index = indexofChild(key);
     keys.insert(keys.begin() + index, key);
@@ -117,46 +121,159 @@ std::tuple<uint, MbpNode*, MbpNode*> MbpNode::splitLeaf()
     MbpNode* left = new MbpNode(parent, prev, this, true);
 
     left->keys = std::vector<uint>(keys.begin(), keys.begin() + mid);
-    left->values = std::vector<uint>(values.begin(), values.begin() + mid);
+    // left->values = std::vector<uint>(values.begin(), values.begin() + mid);
+    left->vertexDigests = std::vector<std::array<unsigned char, SHA256_DIGEST_LENGTH>>(vertexDigests.begin(), vertexDigests.begin() + mid);
 
     keys.erase(keys.begin(), keys.begin() + mid);
-    values.erase(values.begin(), values.begin() + mid);
+    // values.erase(values.begin(), values.begin() + mid);
+    vertexDigests.erase(vertexDigests.begin(), vertexDigests.begin() + mid);
 
     return std::make_tuple(keys[0], left, this);
 }
 
-uint MbpNode::get(uint key) const
+// uint MbpNode::get(const uint& key) const
+// {
+//     uint index = indexofKey(key);
+//     if (index >= keys.size())
+//     {
+//         std::cout << key << " not found in node" << std::endl;
+//         throw std::runtime_error("Key not found in node");
+//     }
+
+//     return values[index];
+// }
+
+std::array<unsigned char, SHA256_DIGEST_LENGTH> MbpNode::getVertexDigest(const VertexID& vid) const
 {
-    int index = -1;
-    for(int i = 0; i < keys.size(); i++)
+    uint index = indexofKey(vid);
+
+    if(index >= keys.size())
     {
-        if(keys[i] == key)
-        {
-            index = i;
-            break;
-        }
+        std::cout << vid << "not found in node" << std::endl;
+        throw std::runtime_error("Key not found in node");
     }
 
-    if (index == -1)
-    {
-        std::cout << key << "not found in node" << std::endl;
-    }
-
-    return values[index];
+    return vertexDigests[index];
 }
 
-void MbpNode::set(uint key, uint value)
+// void MbpNode::set(const uint& key, const uint& value)
+// {
+//     uint i = indexofChild(key);// 查找插入位置
+//     if(!hasKey(key))
+//     {
+//         keys.insert(keys.begin() + i, key);
+//         values.insert(values.begin() + i, value);
+//     }
+//     else
+//     {
+//         values[i - 1] = value;
+//     }
+// }
+
+void MbpNode::setVertexDigest(const VertexID& vid, const std::array<unsigned char, SHA256_DIGEST_LENGTH>& _digest)
 {
-    int i = indexofChild(key);// 查找插入位置
-    if(find(keys.begin(), keys.end(), key) == keys.end())
+    uint i = indexofChild(vid);
+    if(!hasKey(vid))
     {
-        keys.insert(keys.begin() + i, key);
-        values.insert(values.begin() + i, value);
+        keys.insert(keys.begin() + i, vid);
+        vertexDigests.insert(vertexDigests.begin() + i, _digest);
     }
     else
     {
-        values[i - 1] = value;
+        vertexDigests[i - 1] = _digest;
     }
+}
+
+void MbpNode::getDigest(unsigned char* _digest)
+{
+    if(isDigestComputed == false)
+    {
+        digestCompute();
+        isDigestComputed = true;
+    }
+    memcpy(_digest, digest, SHA256_DIGEST_LENGTH);
+}
+
+void MbpNode::digestCompute()
+{
+    SHA256_CTX ctx;
+    SHA256_Init(&ctx);
+
+    if(isLeafNode())
+    {
+        for(int i = 0; i < keys.size(); i++)
+        {
+            unsigned char* data = vertexDigests[i].data();
+            SHA256_Update(&ctx, data, SHA256_DIGEST_LENGTH);
+        }
+    }
+    else
+    {
+        unsigned char childDigest[SHA256_DIGEST_LENGTH];
+        for(int i = 0; i < children.size(); i++)
+        {
+            memset(childDigest, 0, SHA256_DIGEST_LENGTH);
+            children[i]->getDigest(childDigest);
+            SHA256_Update(&ctx, childDigest, SHA256_DIGEST_LENGTH);
+        }
+    }
+    SHA256_Final(digest, &ctx);
+}
+
+void MbpNode::constructVO(std::vector<VOEntry>& vo, std::vector<VertexID>& subgraphVids, const std::map<VertexID, std::string>& serializedVertexInfo)
+{
+    VOEntry entryFront('[');
+    VOEntry entryBack(']');
+    vo.push_back(entryFront);
+    if(isLeafNode())
+    {
+        for(size_t i = 0; i < keys.size(); i++)
+        {
+            if(subgraphVids.size() > 0 && keys[i] == subgraphVids.front())
+            {
+                vo.emplace_back(VOEntry(serializedVertexInfo.at(keys[i])));
+                subgraphVids.erase(subgraphVids.begin());
+            }
+            else
+            {
+                vo.emplace_back(VOEntry(getVertexDigest(keys[i]).data(), SHA256_DIGEST_LENGTH));
+            }
+        }
+    }
+    else
+    {
+        for(size_t i = 0; i < keys.size(); i++)
+        {
+            
+            std::vector<VertexID> nodePartVids;
+            while(subgraphVids.size() > 0 && subgraphVids.front() < keys[i])
+            {
+                nodePartVids.emplace_back(subgraphVids.front());
+                subgraphVids.erase(subgraphVids.begin());
+            }
+            if(nodePartVids.size() > 0)
+            {
+                children[i]->constructVO(vo, nodePartVids, serializedVertexInfo);
+            }
+            else
+            {
+                unsigned char childDigest[SHA256_DIGEST_LENGTH];
+                children[i]->getDigest(childDigest);
+                vo.emplace_back(VOEntry(childDigest, SHA256_DIGEST_LENGTH));
+            }
+        }
+        if(subgraphVids.size() > 0)
+        {
+            children[keys.size()]->constructVO(vo, subgraphVids, serializedVertexInfo);
+        }
+        else
+        {
+            unsigned char childDigest[SHA256_DIGEST_LENGTH];
+            children[keys.size()]->getDigest(childDigest);
+            vo.emplace_back(VOEntry(childDigest, SHA256_DIGEST_LENGTH));
+        }
+    }
+    vo.push_back(entryBack);
 }
 
 void MbpNode::printNodeInfo()

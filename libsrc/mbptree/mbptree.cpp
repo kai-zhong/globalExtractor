@@ -30,6 +30,11 @@ void MbpTree::deleteTree(MbpNode* node)
     delete node;
 }
 
+MbpNode* MbpTree::getRoot() const
+{
+    return root;
+}
+
 MbpNode* MbpTree::findLeaf(uint key) const
 {
     MbpNode* node = root;
@@ -40,15 +45,31 @@ MbpNode* MbpTree::findLeaf(uint key) const
     return node;
 }
 
-uint MbpTree::get(uint key) const
+// uint MbpTree::get(uint key) const
+// {
+//     return findLeaf(key)->get(key);
+// }
+
+std::array<unsigned char, SHA256_DIGEST_LENGTH> MbpTree::getVertexDigest(const VertexID& vid) const
 {
-    return findLeaf(key)->get(key);
+    return findLeaf(vid)->getVertexDigest(vid);
 }
 
-void MbpTree::set(uint key, uint value)
+// void MbpTree::set(uint key, uint value)
+// {
+//     MbpNode* leaf = findLeaf(key);
+//     leaf->set(key, value); // 如果key存在，则更新value；否则，插入新节点
+//     // 如果叶节点超出最大容量
+//     if(leaf->keys.size() > maxCapacity)
+//     {
+//         insert(leaf->splitLeaf());
+//     }
+// }
+
+void MbpTree::setVertexDigest(const VertexID& vid, const std::array<unsigned char, SHA256_DIGEST_LENGTH>& _digest)
 {
-    MbpNode* leaf = findLeaf(key);
-    leaf->set(key, value); // 如果key存在，则更新value；否则，插入新节点
+    MbpNode* leaf = findLeaf(vid);
+    leaf->setVertexDigest(vid, _digest); // 如果key存在，则更新value；否则，插入新节点
     // 如果叶节点超出最大容量
     if(leaf->keys.size() > maxCapacity)
     {
@@ -89,13 +110,14 @@ void MbpTree::insert(std::tuple<uint, MbpNode*, MbpNode*> result)
 void MbpTree::removefromLeaf(uint key, MbpNode* node)
 {
     int index = node->indexofKey(key);
-    if(index == -1)
+    if(index >= node->keys.size())
     {
         std::cout << key << " not found" << std::endl;
         return ;
     }
     node->keys.erase(node->keys.begin() + index);
-    node->values.erase(node->values.begin() + index);
+    // node->values.erase(node->values.begin() + index);
+    node->vertexDigests.erase(node->vertexDigests.begin() + index);
 
     MbpNode* parent = node->getParent();
     // 如果有父节点
@@ -112,7 +134,7 @@ void MbpTree::removefromLeaf(uint key, MbpNode* node)
 void MbpTree::removefromInternal(uint key, MbpNode* node)
 {
     int index = node->indexofKey(key);
-    if(index != -1)
+    if(index < node->keys.size())
     {
         // 找到右子节点的最左叶子节点(即右边孩子叶子节点中的最小值)
         MbpNode* leftMostLeaf = node->children[index + 1]; 
@@ -129,8 +151,10 @@ void MbpTree::borrowKeyfromRightLeaf(MbpNode* node, MbpNode* next)
     MbpNode* parent = node->getParent();
     node->keys.push_back(next->keys.front()); // 从右侧节点借用第一个key
     next->keys.erase(next->keys.begin()); // 删除右侧节点的第一个key
-    node->values.push_back(next->values.front()); // 从右侧节点借用对应的value值
-    next->values.erase(next->values.begin()); // 删除右侧节点的对应的value
+    // node->values.push_back(next->values.front()); // 从右侧节点借用对应的value值
+    // next->values.erase(next->values.begin()); // 删除右侧节点的对应的value
+    node->vertexDigests.push_back(next->vertexDigests.front());
+    next->vertexDigests.erase(next->vertexDigests.begin());
     for(int i = 0; i < parent->children.size(); i++)
     {
         if(parent->children[i] == next)
@@ -146,8 +170,10 @@ void MbpTree::borrowKeyfromLeftLeaf(MbpNode* node, MbpNode* prev)
     MbpNode* parent = node->getParent();
     node->keys.insert(node->keys.begin(), prev->keys.back()); // 从左侧节点借用最后一个key
     prev->keys.erase(prev->keys.end() - 1); // 删除左侧节点的最后一个key
-    node->values.insert(node->values.begin(), prev->values.back()); // 从左侧节点借用对应的value值
-    prev->values.erase(prev->values.end() - 1);
+    // node->values.insert(node->values.begin(), prev->values.back()); // 从左侧节点借用对应的value值
+    // prev->values.erase(prev->values.end() - 1);
+    node->vertexDigests.insert(node->vertexDigests.begin(), prev->vertexDigests.back());
+    prev->vertexDigests.erase(prev->vertexDigests.end() - 1);
     for(int i = 0; i < parent->children.size(); i++)
     {
         if(parent->children[i] == node);
@@ -167,7 +193,8 @@ void MbpTree::mergeNodewithRightLeaf(MbpNode* node, MbpNode* next)
 {
     MbpNode* parent = node->getParent();
     node->keys.insert(node->keys.end(), next->keys.begin(), next->keys.end()); // 将右侧节点的key合并到当前节点
-    node->values.insert(node->values.end(), next->values.begin(), next->values.end()); // 将右侧节点的value值合并到当前节点
+    // node->values.insert(node->values.end(), next->values.begin(), next->values.end()); // 将右侧节点的value值合并到当前节点
+    node->vertexDigests.insert(node->vertexDigests.end(), next->vertexDigests.begin(), next->vertexDigests.end());
     node->setNext(next->getNext()); // 更新当前节点的next指针
 
     if(node->getNext() != nullptr) // 不是最后一个节点
@@ -192,8 +219,8 @@ void MbpTree::mergeNodewithLeftLeaf(MbpNode* node, MbpNode* prev)
 {
     MbpNode* prevParent = prev->getParent();
     prev->keys.insert(prev->keys.end(), node->keys.begin(), node->keys.end()); // 将当前节点的key合并到左侧节点
-    prev->values.insert(prev->values.end(), node->values.begin(), node->values.end()); // 将当前节点的value值合并到左侧节点
-
+    // prev->values.insert(prev->values.end(), node->values.begin(), node->values.end()); // 将当前节点的value值合并到左侧节点
+    prev->vertexDigests.insert(prev->vertexDigests.end(), node->vertexDigests.begin(), node->vertexDigests.end());
     prev->setNext(node->getNext()); // 更新左侧节点的next指针
 
     if(prev->getNext() != nullptr)
@@ -379,6 +406,11 @@ void MbpTree::remove(uint key, MbpNode* node)
     }
 }
 
+void MbpTree::constructVO(std::vector<VOEntry>& vo, std::vector<VertexID> subgraphVids, const std::map<VertexID, std::string>& serializedVertexInfo)
+{
+    root->constructVO(vo, subgraphVids, serializedVertexInfo);
+}
+
 void MbpTree::printMbpTreeInfo(MbpNode* node, std::string _prefix, bool _last)
 {
     if(node == nullptr)
@@ -399,7 +431,11 @@ void MbpTree::printMbpTreeInfo(MbpNode* node, std::string _prefix, bool _last)
             std::cout<<", ";
         }
     }
-    std::cout << "]" << std::endl;
+    // std::cout << "]" << std::endl;
+    std::cout << "] : ";
+    unsigned char nodeDigest[SHA256_DIGEST_LENGTH];
+    node->getDigest(nodeDigest);
+    digestPrint(nodeDigest);
 
     // _prefix += _last ? "   " : "╎  ";
     _prefix += _last ? "   " : "|  ";

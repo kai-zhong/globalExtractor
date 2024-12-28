@@ -27,10 +27,14 @@ class MbpTree
         MbpTree(uint _maxCapaciy = 4);
         ~MbpTree();
 
+        MbpNode* getRoot() const; // 获取根节点
+
         MbpNode* findLeaf(uint key) const; // 查找包含key的叶子节点
 
-        uint get(uint key) const; // 获取key对应的值
-        void set(uint key, uint value); // 设置key对应的值
+        std::array<unsigned char, SHA256_DIGEST_LENGTH> getVertexDigest(const VertexID& vid) const; // 根据关键字获取对应顶点的摘要
+        // uint get(uint key) const; // 获取key对应的值
+        void setVertexDigest(const VertexID& vid, const std::array<unsigned char, SHA256_DIGEST_LENGTH>& _digest); // 设置关键字对应的顶点的摘要
+        // void set(uint key, uint value); // 设置key对应的值
 
         void insert(std::tuple<uint, MbpNode*, MbpNode*> result); 
 
@@ -48,6 +52,8 @@ class MbpTree
         void mergeNodewithLeftInternal(int posinParent, MbpNode* node, MbpNode* prev);
 
         void remove(uint key, MbpNode* node = nullptr);
+
+        void constructVO(std::vector<VOEntry>& vo, std::vector<VertexID> subgraphVids, const std::map<VertexID, std::string>& serializedVertexInfo);
 
         void printMbpTreeInfo(MbpNode* node = nullptr, std::string _prefix = "", bool _last = true);
 };

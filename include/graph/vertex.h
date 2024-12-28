@@ -5,6 +5,8 @@
 #include <iostream>
 #include <string>
 #include <cstring>
+#include <array>
+#include <openssl/sha.h>
 
 #include "../configuration/types.h"
 #include "../configuration/config.h"
@@ -26,6 +28,7 @@ class Vertex
 
         VertexID getVid() const;
         uint getDegree() const;
+        std::array<unsigned char, SHA256_DIGEST_LENGTH> getDigest() const;
         const std::vector<VertexID>& getNeighbors() const;
 
         bool hasNeighbor(VertexID neighbor_vid) const;

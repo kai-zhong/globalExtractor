@@ -30,6 +30,13 @@ uint Vertex::getDegree() const
     return degree;
 }
 
+std::array<unsigned char, SHA256_DIGEST_LENGTH> Vertex::getDigest() const
+{
+    std::array<unsigned char, SHA256_DIGEST_LENGTH> result;
+    std::copy(digest, digest + SHA256_DIGEST_LENGTH, result.begin());
+    return result;
+}
+
 const std::vector<VertexID>& Vertex::getNeighbors() const
 {
     return neighbors;
@@ -66,16 +73,18 @@ void Vertex::removeNeighbor(VertexID neighbor_vid)
 
 void Vertex::digestCompute()
 {
-    SHA256_CTX ctx;
-    SHA256_Init(&ctx);
-
-    SHA256_Update(&ctx, (const unsigned char*)&id, sizeof(VertexID));
-
+    std::ostringstream oss;
+    unsigned char splitter = '/';
+    oss << id;
     for (auto neighbor : neighbors)
     {
-        SHA256_Update(&ctx, (const unsigned char*)&neighbor, sizeof(VertexID));
+        oss << splitter << neighbor;
     }
+    std::string vertexDataStr = oss.str();
 
+    SHA256_CTX ctx;
+    SHA256_Init(&ctx);
+    SHA256_Update(&ctx, (unsigned char*)vertexDataStr.c_str(), vertexDataStr.size());
     SHA256_Final(digest, &ctx);
 }
 
@@ -105,7 +114,7 @@ void Vertex::printInfo() const
     }
     std::cout << std::endl;
     std::cout << "Digest: ";
-    digestPrint(digest);
+    printDigest();
     std::cout << PRINT_SEPARATOR << std::endl;
 }
 
@@ -126,5 +135,9 @@ void Vertex::printNeighbors() const
 void Vertex::printDigest() const
 {
     std::cout << id << ": ";
-    digestPrint(digest);
+    for (size_t i = 0; i < SHA256_DIGEST_LENGTH; i++) 
+    {
+        printf("%02x", digest[i]);
+    }
+    std::cout << std::endl;
 }
