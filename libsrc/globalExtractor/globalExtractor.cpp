@@ -63,7 +63,7 @@ std::map<VertexID, std::string> globalExtractor::serializeGraphInfo(const Graph&
     return serializedInfo;
 }
 
-Graph globalExtractor::subgraphExtract(const Graph& G, uint khop, VertexID vid)
+Graph globalExtractor::subgraphExtract(const Graph& G, uint khop, VertexID vid, bool needVO)
 {
     if(G.getVertexNum() == 0)
     {
@@ -127,8 +127,11 @@ Graph globalExtractor::subgraphExtract(const Graph& G, uint khop, VertexID vid)
     std::vector<VertexID> subgraphVids;
     subgraphVids.reserve(subgraph.getVertexNum());
     std::map<VertexID, std::string> serializedInfo = serializeGraphInfo(G, subgraph, subgraphVids);
-    mbptree->constructVO(vo, subgraphVids, serializedInfo);
-    std::cout << "VO has been constructed." << std::endl;
+    if(needVO)
+    {
+        mbptree->constructVO(vo, subgraphVids, serializedInfo);
+        std::cout << "VO has been constructed." << std::endl;
+    }
     return subgraph;
 }
 
@@ -162,7 +165,7 @@ Graph globalExtractor::kcoreExtract(Graph G, uint k, VertexID queryVid)
         return G;
     }
     // 将所有不连通节点删除
-    return subgraphExtract(G, 1000, queryVid);
+    return subgraphExtract(G, 1000, queryVid, false);
 }
 
 void globalExtractor::getRootDigest(unsigned char* _digest)

@@ -30,7 +30,7 @@ class globalExtractor
 
         std::map<VertexID, std::string> serializeGraphInfo(const Graph& graph, const Graph& subgraph, std::vector<VertexID>& subgraphVids);
 
-        Graph subgraphExtract(const Graph& G, uint khop, VertexID vid);
+        Graph subgraphExtract(const Graph& G, uint khop, VertexID vid, bool needVO);
         Graph kcoreExtract(Graph G, uint k, VertexID queryVid);
 
         void getRootDigest(unsigned char* _digest);
