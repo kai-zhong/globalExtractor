@@ -14,7 +14,7 @@ int main(int argc, char* argv[])
     globalExtractor extractor;
 
     graph.loadGraphfromFile(options.filename);
-
+    std::cout << "Graph Vertex Num : " << graph.getVertexNum() << std::endl;
     auto start = std::chrono::high_resolution_clock::now();
     extractor.buildMbpTree(graph, options.maxcapacity);
     auto end = std::chrono::high_resolution_clock::now();
@@ -24,8 +24,8 @@ int main(int argc, char* argv[])
     start = std::chrono::high_resolution_clock::now();
 
     Graph subgraph = extractor.subgraphExtract(graph, options.khop, options.query, true);
-    std::cout << "Subgraph has extracted" << std::endl << std::endl;
-
+    std::cout << "Subgraph has extracted" << std::endl;
+    std::cout << "SubGraph Vertex Num : " << subgraph.getVertexNum() << std::endl << std::endl;
     Graph getGraph;
     unsigned char vertifyDigest[SHA256_DIGEST_LENGTH];
     std::queue<VOEntry> queueVO = convertVectorToQueue(extractor.getVO());
