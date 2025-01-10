@@ -7,5 +7,6 @@ ${LIBRARY_OUTPUT_PATH}/libutil.a
 ${LIBRARY_OUTPUT_PATH}/libgraph.a
 ${LIBRARY_OUTPUT_PATH}/libglobalextractor.a
 ${LIBRARY_OUTPUT_PATH}/libmbptree.a
+${LIBRARY_OUTPUT_PATH}/libutil.a
 ${OPENSSL_LIBRARIES}
 )

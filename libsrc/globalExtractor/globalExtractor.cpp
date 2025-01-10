@@ -26,8 +26,51 @@ void globalExtractor::buildMbpTree(const Graph& graph, const uint maxcapacity)
         VertexID vid = nodepair.first;
         mbptree->setVertexDigest(vid, graph.getVertexDigest(vid));
     }
+    auto start = std::chrono::high_resolution_clock::now();
     mbptree->getRoot()->digestCompute();
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    std::cout << "MbpTree digest compute time: " << duration.count() << " ms." << std::endl;
     // mbptree->printMbpTreeInfo();
+}
+
+void globalExtractor::mbpTreeDigestCompute()
+{
+    mbptree->getRoot()->digestCompute();
+}
+
+void globalExtractor::mbpTreeAddUpdate(const Vertex& src, const Vertex& dst)
+{
+    if(mbptree == nullptr)
+    {
+        std::cerr << "MbpTree is not built." << std::endl;
+        throw std::runtime_error("MbpTree is not built.");
+    }
+    VertexID srcVid = src.getVid();
+    VertexID dstVid = dst.getVid();
+    mbptree->setVertexDigest(srcVid, src.getDigest());
+    mbptree->setVertexDigest(dstVid, dst.getDigest());
+}
+
+void globalExtractor::mbpTreeDeleteEdgeUpdate(const Vertex& v)
+{
+    if(mbptree == nullptr)
+    {
+        std::cerr << "MbpTree is not built." << std::endl;
+        throw std::runtime_error("MbpTree is not built.");
+    }
+    VertexID vid = v.getVid();
+    mbptree->setVertexDigest(vid, v.getDigest());
+}
+
+void globalExtractor::mbpTreeDeleteVertexUpdate(const VertexID& vid)
+{
+    if(mbptree == nullptr)
+    {
+        std::cerr << "MbpTree is not built." << std::endl;
+        throw std::runtime_error("MbpTree is not built.");
+    }
+    mbptree->remove(vid);
 }
 
 std::map<VertexID, std::string> globalExtractor::serializeGraphInfo(const Graph& graph, const Graph& subgraph, std::vector<VertexID>& subgraphVids)
@@ -63,7 +106,7 @@ std::map<VertexID, std::string> globalExtractor::serializeGraphInfo(const Graph&
     return serializedInfo;
 }
 
-Graph globalExtractor::subgraphExtract(const Graph& G, uint khop, VertexID vid, bool needVO)
+Graph globalExtractor::subgraphExtract(const Graph& G, uint khop, VertexID vid)
 {
     if(G.getVertexNum() == 0)
     {
@@ -124,18 +167,10 @@ Graph globalExtractor::subgraphExtract(const Graph& G, uint khop, VertexID vid, 
     }
     subgraph.buildInvertedIndex();
 
-    std::vector<VertexID> subgraphVids;
-    subgraphVids.reserve(subgraph.getVertexNum());
-    std::map<VertexID, std::string> serializedInfo = serializeGraphInfo(G, subgraph, subgraphVids);
-    if(needVO)
-    {
-        mbptree->constructVO(vo, subgraphVids, serializedInfo);
-        std::cout << "VO has been constructed." << std::endl;
-    }
     return subgraph;
 }
 
-Graph globalExtractor::kcoreExtract(Graph G, uint k, VertexID queryVid)
+Graph globalExtractor::kcoreExtract(const Graph& originG, Graph G, uint k, VertexID queryVid)
 {
     VertexID minDegreeV;
     uint deg;
@@ -165,7 +200,14 @@ Graph globalExtractor::kcoreExtract(Graph G, uint k, VertexID queryVid)
         return G;
     }
     // 将所有不连通节点删除
-    return subgraphExtract(G, 1000, queryVid, false);
+    Graph finalGraph = subgraphExtract(G, 1000, queryVid);
+    std::vector<VertexID> finalVids;
+    finalVids.reserve(finalGraph.getVertexNum());
+    std::map<VertexID, std::string> serializedInfo = serializeGraphInfo(originG, finalGraph, finalVids);
+    vo.clear();
+    mbptree->constructVO(vo, finalVids, serializedInfo);
+    std::cout << "VO has been constructed." << std::endl;
+    return finalGraph;
 }
 
 void globalExtractor::getRootDigest(unsigned char* _digest)

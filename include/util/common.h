@@ -15,6 +15,8 @@
 struct cmdOptions
 {
     std::string filename;
+    std::string addFilename;
+    std::string deleteFilename;
     VertexID query;
     uint k;
     uint khop;

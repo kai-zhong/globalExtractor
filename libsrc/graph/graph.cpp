@@ -124,7 +124,7 @@ void Graph::loadGraphfromFile(const std::string& filename)
         
         if(!(iss >> src >> dst))
         {
-            std::cerr<<"Error: Invalid input forma: "<<line<<std::endl;
+            std::cerr<<"Error: Invalid input format: "<<line<<std::endl;
             throw std::runtime_error("Invalid input format in file " + filename);
         }
 
@@ -195,8 +195,8 @@ void Graph::removeVertex(const VertexID& vid, bool updateIndex, bool computeVDig
 void Graph::addEdge(const VertexID& src, const VertexID& dst, bool updateIndex, bool computeVDigest)
 {
     // 会检查src和dst是否存在，不存在则会自动添加
-    addVertex(src, false, computeVDigest);
-    addVertex(dst, false, computeVDigest);
+    addVertex(src, false, false);
+    addVertex(dst, false, false);
     
     if(!nodes.at(src).hasNeighbor(dst))
     {
