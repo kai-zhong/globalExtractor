@@ -41,7 +41,7 @@ class globalExtractor
 
         void vertify(Graph& subgraph, std::queue<VOEntry>& VO, unsigned char* partdigest);
 
-        void calculateVOSize();
+        size_t calculateVOSize();
 
         const std::vector<VOEntry>& getVO() const;
 

@@ -197,7 +197,7 @@ Graph globalExtractor::kcoreExtract(const Graph& originG, Graph G, uint k, Verte
     if(!satisfyKcore)
     {
         std::cout << "The graph does not satisfy k-core property." << std::endl;
-        return G;
+        // return G;
     }
     // 将所有不连通节点删除
     Graph finalGraph = subgraphExtract(G, 1000, queryVid);
@@ -298,7 +298,7 @@ void globalExtractor::vertify(Graph& subgraph, std::queue<VOEntry>& VO, unsigned
     std::cout << std::endl;
 }
 
-void globalExtractor::calculateVOSize()
+size_t globalExtractor::calculateVOSize()
 {
     // size_t totalSize = sizeof(vo); // vector 内部结构的占用
     size_t totalSize = 0; // 仅计算 VOEntry 占用的大小
@@ -310,11 +310,13 @@ void globalExtractor::calculateVOSize()
             totalSize += std::strlen(entry.nodeData) + 1; // 动态分配的 nodeData 大小
         }
     }
-    std::cout << "Total size of vo:" << std::endl;
-    std::cout << "  Bytes: " << totalSize << " B" << std::endl;
-    std::cout << "  Kilobytes: " << totalSize / 1024.0 << " KB" << std::endl;
-    std::cout << "  Megabytes: " << totalSize / (1024.0 * 1024.0) << " MB" << std::endl;
-    std::cout << std::endl;
+    // std::cout << "Total size of vo:" << std::endl;
+    // std::cout << "  Bytes: " << totalSize << " B" << std::endl;
+    // std::cout << "  Kilobytes: " << totalSize / 1024.0 << " KB" << std::endl;
+    // std::cout << "  Megabytes: " << totalSize / (1024.0 * 1024.0) << " MB" << std::endl;
+    // std::cout << std::endl;
+
+    return totalSize;
 }
 
 const std::vector<VOEntry>& globalExtractor::getVO() const

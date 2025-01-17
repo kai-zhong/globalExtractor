@@ -7,7 +7,10 @@
 #include <iomanip>
 #include <queue>
 #include <sstream>
+#include <fstream>
+#include <map>
 #include <utility>
+
 #include "../util/cmdline.h"
 #include "../configuration/types.h"
 #include "../configuration/config.h"
@@ -17,10 +20,12 @@ struct cmdOptions
     std::string filename;
     std::string addFilename;
     std::string deleteFilename;
+    std::string experimentFilePath;
     VertexID query;
     uint k;
     uint khop;
     uint maxcapacity;
+    std::map<uint, std::vector<VertexID>> queryMap;
 };
 
 struct VOEntry
